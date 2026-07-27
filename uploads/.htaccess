@@ -1,0 +1,5 @@
+# Cegah file di folder ini dieksekusi sebagai script (keamanan)
+<FilesMatch "\.(php|phtml|php3|php4|php5|pl|py|cgi)$">
+  Deny from all
+</FilesMatch>
+Options -Indexes
