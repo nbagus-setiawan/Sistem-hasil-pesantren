@@ -6,7 +6,7 @@ $id = isset($_GET['id']) ? (int)$_GET['id'] : 0;
 $isEdit = $id > 0;
 $bidangList = db()->query("SELECT * FROM bidang ORDER BY id")->fetchAll();
 
-$data = ['nama' => '', 'jabatan' => '', 'bidang_id' => '', 'kontak' => '', 'urutan' => 0];
+$data = ['nama' => '', 'jabatan' => '', 'bidang_id' => '', 'kontak' => '', 'urutan' => 0, 'foto' => null];
 
 if ($isEdit) {
     $stmt = db()->prepare("SELECT * FROM pengurus WHERE id = ?");
@@ -31,12 +31,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($isEdit) {
             db()->prepare("UPDATE pengurus SET nama=?, jabatan=?, bidang_id=?, kontak=?, urutan=? WHERE id=?")
                 ->execute([$data['nama'], $data['jabatan'], $data['bidang_id'], $data['kontak'], $data['urutan'], $id]);
+            $pengurusId = $id;
         } else {
             db()->prepare("INSERT INTO pengurus (nama, jabatan, bidang_id, kontak, urutan) VALUES (?,?,?,?,?)")
                 ->execute([$data['nama'], $data['jabatan'], $data['bidang_id'], $data['kontak'], $data['urutan']]);
+            $pengurusId = db()->lastInsertId();
         }
-        flash_set('success', 'Data pengurus berhasil disimpan.');
-        redirect('struktur.php');
+
+        // Hapus foto lama jika diminta (checkbox "hapus foto saat ini")
+        if (!empty($_POST['hapus_foto']) && !empty($data['foto'])) {
+            $fileLama = __DIR__ . '/' . $data['foto'];
+            if (is_file($fileLama)) @unlink($fileLama);
+            db()->prepare("UPDATE pengurus SET foto = NULL WHERE id = ?")->execute([$pengurusId]);
+            $data['foto'] = null;
+        }
+
+        // Upload foto baru (opsional)
+        if (!empty($_FILES['foto']['name'])) {
+            $allowedExt = ['jpg', 'jpeg', 'png'];
+            $maxSize = 2 * 1024 * 1024; // 2MB
+            $ext = strtolower(pathinfo($_FILES['foto']['name'], PATHINFO_EXTENSION));
+            if (in_array($ext, $allowedExt, true) && $_FILES['foto']['size'] <= $maxSize && $_FILES['foto']['error'] === UPLOAD_ERR_OK) {
+                if (!is_dir(__DIR__ . '/uploads/pengurus')) {
+                    @mkdir(__DIR__ . '/uploads/pengurus', 0755, true);
+                }
+                // Hapus foto lama (kalau ada & belum dihapus di atas) supaya tidak menumpuk file
+                if (!empty($data['foto'])) {
+                    $fileLama = __DIR__ . '/' . $data['foto'];
+                    if (is_file($fileLama)) @unlink($fileLama);
+                }
+                $namaAman = 'pengurus_' . $pengurusId . '_' . time() . '.' . $ext;
+                $tujuan = __DIR__ . '/uploads/pengurus/' . $namaAman;
+                if (move_uploaded_file($_FILES['foto']['tmp_name'], $tujuan)) {
+                    $pathRelatif = 'uploads/pengurus/' . $namaAman;
+                    db()->prepare("UPDATE pengurus SET foto = ? WHERE id = ?")->execute([$pathRelatif, $pengurusId]);
+                    $data['foto'] = $pathRelatif;
+                }
+            } else {
+                $errors[] = 'Foto gagal diunggah — pastikan format JPG/PNG dan ukuran maksimal 2MB.';
+            }
+        }
+
+        if (empty($errors)) {
+            flash_set('success', 'Data pengurus berhasil disimpan.');
+            redirect('struktur.php');
+        }
     }
 }
 
@@ -70,8 +109,32 @@ $user = current_user();
           <div class="alert alert-error"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg><span><?= implode(' ', array_map('e', $errors)) ?></span></div>
         </div>
       <?php endif; ?>
-      <form method="post">
+      <form method="post" enctype="multipart/form-data">
         <div class="form-card-body">
+
+          <div class="form-section">
+            <div class="form-section-label">Foto Profil (opsional)</div>
+            <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap;">
+              <?php if (!empty($data['foto']) && is_file(__DIR__ . '/' . $data['foto'])): ?>
+                <img src="<?= e($data['foto']) ?>?v=<?= time() ?>" alt="Foto <?= e($data['nama']) ?>" class="pengurus-photo" style="width:64px;height:64px;">
+              <?php else: ?>
+                <div class="user-avatar" style="width:64px;height:64px;font-size:18px;"><?= e(inisial($data['nama'] ?: '?')) ?></div>
+              <?php endif; ?>
+              <div style="flex:1; min-width:200px;">
+                <label class="upload-zone" style="display:block; padding:12px;">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><path d="M17 8l-5-5-5 5M12 3v12"/></svg>
+                  <div><b>Klik untuk pilih foto</b> — JPG atau PNG, maks 2MB</div>
+                  <input type="file" name="foto" accept=".jpg,.jpeg,.png" style="display:none;" onchange="this.parentElement.querySelector('b').textContent = this.files[0]?.name || 'Klik untuk pilih foto'">
+                </label>
+                <?php if (!empty($data['foto'])): ?>
+                  <label style="display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--ink-600); margin-top:8px; font-weight:600; cursor:pointer;">
+                    <input type="checkbox" name="hapus_foto" value="1"> Hapus foto saat ini
+                  </label>
+                <?php endif; ?>
+              </div>
+            </div>
+          </div>
+
           <div class="form-row">
             <div class="form-group"><label>Nama</label><input type="text" name="nama" required value="<?= e($data['nama']) ?>"></div>
             <div class="form-group"><label>Jabatan</label><input type="text" name="jabatan" required placeholder="cth: Kepala Bidang Pendidikan" value="<?= e($data['jabatan']) ?>"></div>

@@ -9,3 +9,4 @@ uploads/*
 # File sistem/editor
 .DS_Store
 *.log
+sql/*.sql

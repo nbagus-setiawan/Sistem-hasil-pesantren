@@ -54,7 +54,11 @@ $flashSuccess = flash_get('success');
         <div class="rapat-card reveal" style="cursor:default;">
           <div class="rapat-top">
             <div style="display:flex; align-items:center; gap:12px;">
-              <div class="user-avatar" style="width:44px;height:44px;font-size:14px;"><?= e(inisial($p['nama'])) ?></div>
+              <?php if (!empty($p['foto']) && is_file(__DIR__ . '/' . $p['foto'])): ?>
+                <img src="<?= e($p['foto']) ?>" alt="<?= e($p['nama']) ?>" class="pengurus-photo" style="width:44px;height:44px;">
+              <?php else: ?>
+                <div class="user-avatar" style="width:44px;height:44px;font-size:14px;"><?= e(inisial($p['nama'])) ?></div>
+              <?php endif; ?>
               <div>
                 <div class="rapat-title" style="font-size:15px;"><?= e($p['nama']) ?></div>
                 <div style="font-size:12.5px; color:var(--ink-600); font-weight:600;"><?= e($p['jabatan']) ?></div>

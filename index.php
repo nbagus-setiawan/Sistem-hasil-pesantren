@@ -5,7 +5,7 @@ require_login();
 $activePage = 'dashboard';
 $user = current_user();
 
-// ==== Statistik ====
+// ==== Statistik ringkasan ====
 $bulanIni = date('Y-m');
 $stmt = db()->prepare("SELECT COUNT(*) AS n FROM musyawarah WHERE DATE_FORMAT(tanggal, '%Y-%m') = ?");
 $stmt->execute([$bulanIni]);
@@ -15,7 +15,55 @@ $totalSelesai = db()->query("SELECT COUNT(*) AS n FROM musyawarah WHERE status='
 $totalProses = db()->query("SELECT COUNT(*) AS n FROM musyawarah WHERE status='proses'")->fetch()['n'];
 $totalTertunda = db()->query("SELECT COUNT(*) AS n FROM musyawarah WHERE status='tertunda'")->fetch()['n'];
 
-// ==== Rapat terbaru (5 teratas) ====
+// ==== Grafik: jumlah rapat per bulan (6 bulan terakhir) ====
+$stmtBulan = db()->prepare("
+    SELECT DATE_FORMAT(tanggal, '%Y-%m') AS ym, COUNT(*) AS n
+    FROM musyawarah
+    WHERE tanggal >= DATE_SUB(DATE_FORMAT(CURDATE(), '%Y-%m-01'), INTERVAL 5 MONTH)
+    GROUP BY ym
+");
+$stmtBulan->execute();
+$rawBulan = [];
+foreach ($stmtBulan->fetchAll() as $row) {
+    $rawBulan[$row['ym']] = (int)$row['n'];
+}
+
+$namaBulanSingkat = ['', 'Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+$labelBulan = [];
+$dataBulan = [];
+for ($i = 5; $i >= 0; $i--) {
+    $ts = strtotime("-{$i} months", strtotime(date('Y-m-01')));
+    $key = date('Y-m', $ts);
+    $labelBulan[] = $namaBulanSingkat[(int)date('n', $ts)] . ' ' . date('y', $ts);
+    $dataBulan[] = $rawBulan[$key] ?? 0;
+}
+
+// ==== Grafik: jumlah rapat per bidang ====
+$daftarBidangStat = db()->query("
+    SELECT b.nama_bidang, b.kode_warna, COUNT(m.id) AS n
+    FROM bidang b
+    LEFT JOIN musyawarah m ON m.bidang_id = b.id
+    GROUP BY b.id
+    ORDER BY b.id
+")->fetchAll();
+
+$warnaBidangMap = [
+    'pendidikan' => '#1B5E4A',
+    'sarana'     => '#2E5AAC',
+    'kesantrian' => '#7A3FB0',
+    'keuangan'   => '#96660D',
+];
+$labelBidang = [];
+$dataBidang = [];
+$warnaBidang = [];
+foreach ($daftarBidangStat as $b) {
+    $labelBidang[] = $b['nama_bidang'];
+    $dataBidang[] = (int)$b['n'];
+    $warnaBidang[] = $warnaBidangMap[$b['kode_warna']] ?? '#1B5E4A';
+}
+$adaDataBidang = array_sum($dataBidang) > 0;
+
+// ==== Rapat terbaru (6 teratas) ====
 $rapatTerbaru = db()->query("
     SELECT m.*, b.nama_bidang, b.kode_warna
     FROM musyawarah m
@@ -90,6 +138,29 @@ $flashSuccess = flash_get('success');
     </div>
 
     <div class="section-head reveal">
+      <h2 class="font-display">Statistik Musyawarah</h2>
+    </div>
+    <div class="chart-grid reveal">
+      <div class="chart-card">
+        <div class="chart-card-title">Jumlah Rapat per Bulan</div>
+        <div class="chart-card-wrap"><canvas id="chartBulan"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-card-title">Sebaran Rapat per Bidang</div>
+        <div class="chart-card-wrap">
+          <?php if ($adaDataBidang): ?>
+            <canvas id="chartBidang"></canvas>
+          <?php else: ?>
+            <div class="empty-state" style="padding:24px 10px;">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="9"/><path d="M12 8v4M12 16h.01"/></svg>
+              <h3 style="font-size:13.5px;">Belum ada data rapat</h3>
+            </div>
+          <?php endif; ?>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-head reveal">
       <h2 class="font-display">Hasil Musyawarah Terbaru</h2>
       <a class="link-more" href="rapat_list.php">Lihat semua <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg></a>
     </div>
@@ -120,5 +191,61 @@ $flashSuccess = flash_get('success');
   </main>
 </div>
 <script src="assets/js/app.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<script>
+(function(){
+  const labelBulan = <?= json_encode($labelBulan, JSON_UNESCAPED_UNICODE) ?>;
+  const dataBulan = <?= json_encode($dataBulan) ?>;
+
+  const elBulan = document.getElementById('chartBulan');
+  if (elBulan && window.Chart) {
+    new Chart(elBulan, {
+      type: 'bar',
+      data: {
+        labels: labelBulan,
+        datasets: [{
+          label: 'Jumlah Rapat',
+          data: dataBulan,
+          backgroundColor: '#1B5E4A',
+          borderRadius: 8,
+          maxBarThickness: 34
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { beginAtZero: true, ticks: { stepSize: 1, precision: 0 }, grid: { color: '#E4E0D3' } },
+          x: { grid: { display: false } }
+        }
+      }
+    });
+  }
+
+  <?php if ($adaDataBidang): ?>
+  const labelBidang = <?= json_encode($labelBidang, JSON_UNESCAPED_UNICODE) ?>;
+  const dataBidang = <?= json_encode($dataBidang) ?>;
+  const warnaBidang = <?= json_encode($warnaBidang) ?>;
+
+  const elBidang = document.getElementById('chartBidang');
+  if (elBidang && window.Chart) {
+    new Chart(elBidang, {
+      type: 'doughnut',
+      data: {
+        labels: labelBidang,
+        datasets: [{ data: dataBidang, backgroundColor: warnaBidang, borderWidth: 0 }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        cutout: '62%',
+        plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 }, padding: 14 } } }
+      }
+    });
+  }
+  <?php endif; ?>
+})();
+</script>
 </body>
 </html>
