@@ -36,7 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   <div class="login-card">
     <div class="login-brand">
       <div class="brand-mark">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 L14.5 9 L22 9 L16 13.5 L18 21 L12 16.5 L6 21 L8 13.5 L2 9 L9.5 9 Z"/></svg>
+        <img src="assets/img/logo.webp" alt="Logo Al-Falah Putak">
       </div>
       <h1>Sistem Musyawarah</h1>
       <p>Ponpes Al-Falah Putak — Khusus Pengurus</p>

@@ -10,7 +10,7 @@ $isAdmin = ($user['role'] ?? '') === 'admin';
 <aside class="sidebar">
   <div class="sidebar-brand">
     <div class="brand-mark">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 L14.5 9 L22 9 L16 13.5 L18 21 L12 16.5 L6 21 L8 13.5 L2 9 L9.5 9 Z"/></svg>
+      <img src="assets/img/logo.webp" alt="Logo Al-Falah Putak">
     </div>
     <div>
       <div class="brand-name">Al-Falah Putak</div>
@@ -60,7 +60,7 @@ $isAdmin = ($user['role'] ?? '') === 'admin';
 <div class="drawer-overlay" id="drawerOverlay"></div>
 <div class="drawer" id="drawer">
   <div class="sidebar-brand">
-    <div class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 L14.5 9 L22 9 L16 13.5 L18 21 L12 16.5 L6 21 L8 13.5 L2 9 L9.5 9 Z"/></svg></div>
+    <div class="brand-mark"><img src="assets/img/logo.webp" alt="Logo Al-Falah Putak"></div>
     <div><div class="brand-name">Al-Falah Putak</div><div class="brand-sub">SISTEM MUSYAWARAH</div></div>
   </div>
   <nav>
@@ -96,7 +96,7 @@ $isAdmin = ($user['role'] ?? '') === 'admin';
 <div class="mobile-topbar">
   <button class="hamburger" id="hamburgerBtn"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18"><path d="M3 12h18M3 6h18M3 18h18"/></svg></button>
   <div class="brand">
-    <div class="brand-mark" style="width:32px;height:32px;"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="16" height="16"><path d="M12 2 L14.5 9 L22 9 L16 13.5 L18 21 L12 16.5 L6 21 L8 13.5 L2 9 L9.5 9 Z"/></svg></div>
+    <div class="brand-mark" style="width:32px;height:32px;"><img src="assets/img/logo.webp" alt="Logo Al-Falah Putak"></div>
     <span class="font-display" style="font-weight:700; font-size:14.5px;">Al-Falah Putak</span>
   </div>
   <div class="user-avatar" style="width:30px;height:30px;font-size:10.5px;"><?= e(inisial($user['nama_lengkap'] ?? '?')) ?></div>
