@@ -1,0 +1,11 @@
+# File konfigurasi sensitif
+config/database.php
+
+# Folder upload user (biasanya berisi data user, tidak perlu di-repo)
+uploads/*
+!uploads/.htaccess
+!uploads/README.txt
+
+# File sistem/editor
+.DS_Store
+*.log
